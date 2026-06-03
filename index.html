@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Today's Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5F0E8;
+    --warm-white: #FAFAF7;
+    --espresso: #2C1810;
+    --clay: #B5714A;
+    --blush: #E8C4A8;
+    --sage: #8A9E8B;
+    --done: #C8D5C8;
+    --done-text: #8A9E8B;
+    --border: rgba(44,24,16,0.12);
+    --shadow: rgba(44,24,16,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--espresso);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--espresso);
+    color: var(--cream);
+    padding: 36px 28px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-inner {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .date-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--blush);
+    margin-bottom: 8px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+
+  .header h1 em {
+    font-style: italic;
+    color: var(--blush);
+  }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .progress-bar-bg {
+    flex: 1;
+    height: 2px;
+    background: rgba(245,240,232,0.2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--blush);
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  .progress-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--blush);
+    white-space: nowrap;
+  }
+
+  /* Content */
+  .content {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* Mantra */
+  .mantra {
+    padding: 22px 0 4px;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--clay);
+    letter-spacing: 0.01em;
+    opacity: 0.85;
+  }
+
+  /* Time block */
+  .block {
+    margin-top: 6px;
+    border-radius: 2px;
+    overflow: hidden;
+    transition: opacity 0.3s;
+  }
+
+  .block.all-done {
+    opacity: 0.5;
+  }
+
+  .block-header {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 18px 0 8px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .block-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--clay);
+    white-space: nowrap;
+    min-width: 80px;
+  }
+
+  .block-title {
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .block-emoji {
+    font-size: 15px;
+    opacity: 0.7;
+  }
+
+  .block-toggle {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--clay);
+    opacity: 0.5;
+    transition: transform 0.25s;
+  }
+
+  .block.collapsed .block-toggle {
+    transform: rotate(-90deg);
+  }
+
+  .block-body {
+    padding: 0 0 8px 94px;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(.4,0,.2,1), opacity 0.25s;
+    max-height: 800px;
+    opacity: 1;
+  }
+
+  .block.collapsed .block-body {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  /* Note card */
+  .note-card {
+    background: rgba(181,113,74,0.08);
+    border-left: 2px solid var(--clay);
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--clay);
+    border-radius: 0 2px 2px 0;
+    line-height: 1.5;
+  }
+
+  /* Task item */
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+
+  .task:hover { background: rgba(181,113,74,0.05); margin: 0 -6px; padding: 5px 6px; }
+
+  .task-check {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .task.checked .task-check {
+    background: var(--sage);
+    border-color: var(--sage);
+  }
+
+  .task.checked .task-check::after {
+    content: '';
+    width: 5px;
+    height: 3px;
+    border-left: 1.5px solid white;
+    border-bottom: 1.5px solid white;
+    transform: rotate(-45deg) translateY(-1px);
+  }
+
+  .task-text {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--espresso);
+    transition: color 0.2s, text-decoration 0.2s;
+    flex: 1;
+  }
+
+  .task.checked .task-text {
+    color: var(--done-text);
+    text-decoration: line-through;
+    text-decoration-color: rgba(138,158,139,0.5);
+  }
+
+  /* Sub-group */
+  .subgroup {
+    margin: 8px 0;
+  }
+
+  .subgroup-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--clay);
+    opacity: 0.7;
+    margin-bottom: 5px;
+    padding-top: 4px;
+  }
+
+  /* Avoid list */
+  .avoid-list {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(44,24,16,0.04);
+    border-radius: 2px;
+  }
+
+  .avoid-list .avoid-item {
+    font-size: 13px;
+    color: rgba(44,24,16,0.5);
+    line-height: 1.8;
+    font-style: italic;
+  }
+
+  .avoid-list .avoid-item::before {
+    content: '— ';
+  }
+
+  /* Options list */
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .option-pill {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    color: var(--espresso);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+
+  .option-pill:hover { background: var(--blush); border-color: var(--clay); }
+  .option-pill.picked { background: var(--sage); border-color: var(--sage); color: white; }
+
+  /* "Full packing list" section */
+  .packing-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+  }
+
+  /* Bottom CTA */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0; right: 0;
+    background: var(--espresso);
+    color: var(--cream);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    z-index: 200;
+  }
+
+  .bottom-bar .tonight {
+    color: var(--blush);
+    font-style: normal;
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid rgba(245,240,232,0.25);
+    color: var(--cream);
+    padding: 5px 14px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+
+  .reset-btn:hover { opacity: 1; }
+
+  /* All done celebration */
+  .celebration {
+    display: none;
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--sage);
+    font-style: italic;
+    font-size: 18px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="date-label">Wednesday · June 3, 2026</div>
+    <h1>Cleaning, Pilates,<br>Packing & <em>Tonight</em></h1>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-count" id="progressCount">0 / 0</div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="mantra">Not perfection — momentum. You leave feeling reset.</div>
+
+  <!-- BLOCKS -->
+
+  <div class="block" id="b1">
+    <div class="block-header" onclick="toggleBlock('b1')">
+      <span class="block-time">9:45–10:05</span>
+      <span class="block-title">Startup Reset</span>
+      <span class="block-emoji">🌅</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Do NOT sit at the laptop. No scrolling breakfast.</div>
+      <div class="subgroup"><div class="subgroup-label">Environment</div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Open blinds + windows</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Change into cleaning clothes</div></div>
+      </div>
+      <div class="subgroup"><div class="subgroup-label">Gather supplies</div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Trash bag + recycling bag</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Laundry basket + "belongs elsewhere" tote</div></div>
+      </div>
+      <div class="subgroup"><div class="subgroup-label">Laundry + Breakfast</div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Strip couch + bedroom bedding</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Start first laundry load</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Breakfast: high protein + water + coffee</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block" id="b2">
+    <div class="block-header" onclick="toggleBlock('b2')">
+      <span class="block-time">10:05–10:20</span>
+      <span class="block-title">Clutter Sweep</span>
+      <span class="block-emoji">🌀</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Fast pass only — visual reduction, not deep cleaning yet.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Collect all trash + cans throughout apartment</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Gather dishes to kitchen</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-text task-check"></div><div class="task-check" style="display:none"></div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Consolidate random objects + start recycling pile</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Place loose items into category bags</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b3">
+    <div class="block-header" onclick="toggleBlock('b3')">
+      <span class="block-time">10:20–10:30</span>
+      <span class="block-title">Adderall + Water Break</span>
+      <span class="block-emoji">💊</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Momentum is already built — peak focus lands right on cleaning + packing.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Take 5 mg Adderall</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Refill water bottle</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Move laundry if needed</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b4">
+    <div class="block-header" onclick="toggleBlock('b4')">
+      <span class="block-time">10:30–11:05</span>
+      <span class="block-title">Bathroom Deep Clean</span>
+      <span class="block-emoji">🚿</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Do this before you get grossed out or tired. No perfectionism.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Toilet</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Sink + mirror</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">All surfaces</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Quick shower/tub clean</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Put bathroom items away + fresh towels</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b5">
+    <div class="block-header" onclick="toggleBlock('b5')">
+      <span class="block-time">11:05–11:45</span>
+      <span class="block-title">Living Room Reset</span>
+      <span class="block-emoji">🛋️</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Do NOT get stuck organizing tiny objects.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Clutter pickup</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Recycling downstairs</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Wipe surfaces</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Organize shoes</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Prep vacuum path (don't vacuum yet)</div></div>
+      <div class="subgroup"><div class="subgroup-label">Spot check these</div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Camera, mosquito spray, glasses</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Cans + desk-side clutter</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block" id="b6">
+    <div class="block-header" onclick="toggleBlock('b6')">
+      <span class="block-time">11:45–12:15</span>
+      <span class="block-title">Kitchen</span>
+      <span class="block-emoji">🍳</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Dishes</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Clear + wipe countertops</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Clean sink</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Trash + recycling</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Move laundry again while here</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b7">
+    <div class="block-header" onclick="toggleBlock('b7')">
+      <span class="block-time">12:15–12:45</span>
+      <span class="block-title">Bedroom Reset</span>
+      <span class="block-emoji">🛏️</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Containment session only — NOT a closet overhaul.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Group + hang clean clothes</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Dirty clothes contained (bins/bags)</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Make the actual bed</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Clear floor for visual calm</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b8">
+    <div class="block-header" onclick="toggleBlock('b8')">
+      <span class="block-time">12:45–1:05</span>
+      <span class="block-title">Pilates Transition</span>
+      <span class="block-emoji">🧘</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Apartment ~80% done at this point. Quick change only.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Grab water + socks + headphones</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Change into pilates gear</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Head out</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b9">
+    <div class="block-header" onclick="toggleBlock('b9')">
+      <span class="block-time">1:15–2:15</span>
+      <span class="block-title">Pilates</span>
+      <span class="block-emoji">✨</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Good timing psychologically and physically. Hydrate after.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Pilates class ✓</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Hydrate well on the way out</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b10">
+    <div class="block-header" onclick="toggleBlock('b10')">
+      <span class="block-time">2:15–2:45</span>
+      <span class="block-title">Brows + Walk</span>
+      <span class="block-emoji">🪡</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Brow appointment</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Walk + decompress</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b11">
+    <div class="block-header" onclick="toggleBlock('b11')">
+      <span class="block-time">2:45–3:15</span>
+      <span class="block-title">Shower + Hair Wash</span>
+      <span class="block-emoji">🧖</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">This is your real mental reset — you should feel like a different person after.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Hair wash + full body shower</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Skincare routine</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Comfy clean clothes on</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b12">
+    <div class="block-header" onclick="toggleBlock('b12')">
+      <span class="block-time">3:15–3:45</span>
+      <span class="block-title">Post-Pilates Lunch</span>
+      <span class="block-emoji">🍱</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Stabilize energy — not a food coma. Drink a lot of water here.</div>
+      <div class="subgroup"><div class="subgroup-label">Good options</div></div>
+      <div class="options">
+        <div class="option-pill" onclick="pickOption(this)">Sushi rolls + edamame</div>
+        <div class="option-pill" onclick="pickOption(this)">Poke bowl</div>
+        <div class="option-pill" onclick="pickOption(this)">Salmon/chicken rice bowl</div>
+        <div class="option-pill" onclick="pickOption(this)">Smoothie + protein</div>
+      </div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Lunch eaten ✓</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Big glass of water + electrolytes</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b13">
+    <div class="block-header" onclick="toggleBlock('b13')">
+      <span class="block-time">3:45–4:45</span>
+      <span class="block-title">Packing — NYC Trip</span>
+      <span class="block-emoji">🧳</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">5 summer days NYC + Belmont Stakes. Leave intentional suitcase space. No "just in case" outfits.</div>
+      <div class="packing-cols">
+        <div>
+          <div class="subgroup-label">Outfits</div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Belmont Stakes outfit</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">2 dinner outfits</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Casual daytime outfits</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Travel outfit (worn)</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Workout overlap pieces</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">3 shoes MAX</div></div>
+        </div>
+        <div>
+          <div class="subgroup-label">Backpack</div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Chargers</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Meds</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Skincare essentials</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Travel docs + ID</div></div>
+          <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Headphones + wallet</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="block" id="b14">
+    <div class="block-header" onclick="toggleBlock('b14')">
+      <span class="block-time">4:45–5:15</span>
+      <span class="block-title">Apartment Final Pass</span>
+      <span class="block-emoji">🏠</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Future-self-will-thank-me block.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Vacuum</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Remake beds + couch setup</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Laundry finalized + put away</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Empty sink</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Final trash out</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Visual scan — does it feel good?</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b15">
+    <div class="block-header" onclick="toggleBlock('b15')">
+      <span class="block-time">5:15–5:45</span>
+      <span class="block-title">Admin + Quiet Reset</span>
+      <span class="block-emoji">📋</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Low-intensity only. Do NOT start a big project.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Travel confirmations checked</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Devices charging</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Weather check for NYC</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Text responses done</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b16">
+    <div class="block-header" onclick="toggleBlock('b16')">
+      <span class="block-time">5:45–6:05</span>
+      <span class="block-title">Pre-Date Buffer Meal</span>
+      <span class="block-emoji">🫐</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Arrive not starving but still able to eat naturally if dinner happens. Do not drink on empty.</div>
+      <div class="options">
+        <div class="option-pill" onclick="pickOption(this)">Sushi roll + miso</div>
+        <div class="option-pill" onclick="pickOption(this)">Protein snack + fruit</div>
+        <div class="option-pill" onclick="pickOption(this)">Half wrap/sandwich</div>
+        <div class="option-pill" onclick="pickOption(this)">Yogurt + berries</div>
+      </div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Buffer meal eaten ✓</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Hydrate</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b17">
+    <div class="block-header" onclick="toggleBlock('b17')">
+      <span class="block-time">6:05–6:50</span>
+      <span class="block-title">Get Ready</span>
+      <span class="block-emoji">💄</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="note-card">Hair is already washed — easier tonight. No outfit spiral. No experimental makeup.</div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Makeup</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Outfit + jewelry sorted</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Bag packed for tonight</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Quick room reset while getting ready</div></div>
+    </div>
+  </div>
+
+  <div class="block" id="b18">
+    <div class="block-header" onclick="toggleBlock('b18')">
+      <span class="block-time">6:50–7:00</span>
+      <span class="block-title">Departure Checklist</span>
+      <span class="block-emoji">🔑</span>
+      <span class="block-toggle">▾</span>
+    </div>
+    <div class="block-body">
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Plug things in + charge</div></div>
+      <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Set out airport outfit for tomorrow</div></div>
+      <div class="subgroup"><div class="subgroup-label">In bag</div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">ID ✓</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Wallet ✓</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Keys ✓</div></div>
+        <div class="task" onclick="toggle(this)"><div class="task-check"></div><div class="task-text">Charger ✓</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; padding: 40px 0 20px; font-style: italic; color: var(--clay); font-size: 15px; opacity: 0.8;">
+    7:00 — Leave for your date.<br>
+    <span style="font-size:13px; opacity:0.7;">Apartment reset. Trip handled. Physically regulated. Not rushed.</span>
+  </div>
+
+</div>
+
+<div class="bottom-bar">
+  <span>Tonight: <span class="tonight">date night 🌙</span></span>
+  <button class="reset-btn" onclick="resetAll()">reset all</button>
+</div>
+
+<script>
+  // Remove the broken blank task in b2
+  document.querySelectorAll('.task').forEach(t => {
+    if (t.querySelectorAll('.task-check').length > 1 || t.querySelector('.task-text')?.classList.contains('task-check')) {
+      t.remove();
+    }
+  });
+
+  function toggle(el) {
+    el.classList.toggle('checked');
+    updateProgress();
+    checkBlockDone(el.closest('.block'));
+  }
+
+  function toggleBlock(id) {
+    const block = document.getElementById(id);
+    block.classList.toggle('collapsed');
+  }
+
+  function pickOption(el) {
+    el.classList.toggle('picked');
+  }
+
+  function checkBlockDone(block) {
+    if (!block) return;
+    const tasks = block.querySelectorAll('.task');
+    const checked = block.querySelectorAll('.task.checked');
+    if (tasks.length > 0 && tasks.length === checked.length) {
+      block.classList.add('all-done');
+      // Auto-collapse after short delay
+      setTimeout(() => block.classList.add('collapsed'), 600);
+    } else {
+      block.classList.remove('all-done');
+    }
+  }
+
+  function updateProgress() {
+    const tasks = document.querySelectorAll('.task');
+    const checked = document.querySelectorAll('.task.checked');
+    const total = tasks.length;
+    const done = checked.length;
+    const pct = total ? (done / total * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressCount').textContent = done + ' / ' + total;
+  }
+
+  function resetAll() {
+    document.querySelectorAll('.task.checked').forEach(t => t.classList.remove('checked'));
+    document.querySelectorAll('.block.all-done').forEach(b => b.classList.remove('all-done'));
+    document.querySelectorAll('.block.collapsed').forEach(b => b.classList.remove('collapsed'));
+    document.querySelectorAll('.option-pill.picked').forEach(p => p.classList.remove('picked'));
+    updateProgress();
+  }
+
+  // Init
+  updateProgress();
+</script>
+</body>
+</html>
